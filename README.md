@@ -10,39 +10,51 @@ block chain
 
  Create a new file on the Remix website by clicking the "+" symbol in the left-hand sidebar. Save the file as Phoenixtoken.sol . Insert the following code into the file:
 
- // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.12 <0.9.0;
 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 contract Payment {
-    uint public balance;
-    uint public constant MAX_UINT = 2 ** 256 - 1;
+    using SafeMath for uint256;
 
-    function deposit(uint _amount) public {
-        // Use require to ensure that the deposit doesn't cause overflow
-        uint oldBalance = balance;
-        uint newBalance = balance + _amount;
-        require(newBalance >= oldBalance, "Overflow");
+    uint256 public balance;
+    uint256 public constant MAX_UINT = type(uint256).max;
 
-        balance = newBalance;
+    event Deposit(address indexed from, uint256 amount);
+    event Withdrawal(address indexed to, uint256 amount);
 
-        // Use assert to ensure that the balance is correctly updated
-        assert(balance >= oldBalance);
+    // Deposit function allowing users to deposit ETH into the contract
+    function deposit(uint256 _amount) public payable {
+        // Ensure that the sent amount matches the specified amount
+        require(msg.value == _amount, "Sent value does not match specified amount");
+
+        // Add the deposit amount to the balance using SafeMath to prevent overflow
+        balance = balance.add(_amount);
+
+        // Emit a deposit event for logging
+        emit Deposit(msg.sender, _amount);
     }
 
-    function withdraw(uint _amount) public {
-        // Ensure that the withdrawal doesn't cause underflow
+    // Withdraw function allowing users to withdraw ETH from the contract
+    function withdraw(uint256 _amount) public {
+        // Ensure that the contract has enough balance for the withdrawal
         require(balance >= _amount, "Insufficient balance");
-        
-        // Safe subtraction to prevent underflow
-        balance -= _amount;
 
-        // Assert to ensure that the balance is correctly updated
-        assert(balance <= MAX_UINT);
+        // Subtract the withdrawal amount from the balance using SafeMath to prevent underflow
+        balance = balance.sub(_amount);
 
-        // Add a revert statement if the withdrawal amount exceeds the contract's balance
-        if (balance < _amount) {
-            revert("The amount withdrawal exceeds to the balance");
-        }
+        // Transfer the specified amount to the caller
+        payable(msg.sender).transfer(_amount);
+
+        // Emit a withdrawal event for logging
+        emit Withdrawal(msg.sender, _amount);
+    }
+    
+    // Fallback function to handle direct ETH transfers to the contract
+    receive() external payable {
+        // Treat any direct transfer as a deposit
+        deposit(msg.value);
     }
 }
 
