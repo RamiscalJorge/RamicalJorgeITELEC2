@@ -11,52 +11,43 @@ block chain
  Create a new file on the Remix website by clicking the "+" symbol in the left-hand sidebar. Save the file as Phoenixtoken.sol . Insert the following code into the file:
 
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.12 <0.9.0;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+contract MyContract {
+    address public Jorge;  // Setting 'Jorge' as the owner
+    mapping(address => uint) public balances;
 
-contract Payment {
-    using SafeMath for uint256;
-
-    uint256 public balance;
-    uint256 public constant MAX_UINT = type(uint256).max;
-
-    event Deposit(address indexed from, uint256 amount);
-    event Withdrawal(address indexed to, uint256 amount);
-
-    // Deposit function allowing users to deposit ETH into the contract
-    function deposit(uint256 _amount) public payable {
-        // Ensure that the sent amount matches the specified amount
-        require(msg.value == _amount, "Sent value does not match specified amount");
-
-        // Add the deposit amount to the balance using SafeMath to prevent overflow
-        balance = balance.add(_amount);
-
-        // Emit a deposit event for logging
-        emit Deposit(msg.sender, _amount);
+    constructor() {
+        Jorge = msg.sender;  // Initializing 'Jorge' as the contract deployer
     }
 
-    // Withdraw function allowing users to withdraw ETH from the contract
-    function withdraw(uint256 _amount) public {
-        // Ensure that the contract has enough balance for the withdrawal
-        require(balance >= _amount, "Insufficient balance");
-
-        // Subtract the withdrawal amount from the balance using SafeMath to prevent underflow
-        balance = balance.sub(_amount);
-
-        // Transfer the specified amount to the caller
-        payable(msg.sender).transfer(_amount);
-
-        // Emit a withdrawal event for logging
-        emit Withdrawal(msg.sender, _amount);
+    function deposit() public payable {
+        require(msg.value > 0, "Value must be greater than 0");  // Ensuring the deposit amount is greater than 0
+        balances[msg.sender] += msg.value;  // Updating the balance mapping for the sender
     }
-    
-    // Fallback function to handle direct ETH transfers to the contract
-    receive() external payable {
-        // Treat any direct transfer as a deposit
-        deposit(msg.value);
+
+    function withdraw(uint amount) public {
+        require(amount > 0, "Withdrawal amount should be greater than 0");  // Ensuring the withdrawal amount is greater than 0
+        require(balances[msg.sender] >= amount, "You have insufficient balance");  // Checking if the sender has enough balance
+
+        balances[msg.sender] -= amount;  // Updating the balance mapping for the sender
+
+        bool success = payable(msg.sender).send(amount);  // Sending the amount to the sender
+        require(success, "Transfer failed.");  // Ensuring the transfer was successful
+    }
+
+    function assertE(uint value) public pure returns (uint) {
+        uint result = value * 2;  // Doubling the input value
+        assert(result > value);  // Asserting that the result is greater than the input value
+        return result;
+    }
+
+    function revertE(uint value) public pure returns (uint) {
+        require(value != 0, "Value cannot be 0");  // Requiring the input value to be non-zero
+        return 100 / value;  // Returning the result of 100 divided by the input value
     }
 }
+
 
 Authors
 Jorge ramiscal
